@@ -1,13 +1,15 @@
 library new_version;
 
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:html/parser.dart' show parse;
 import 'package:http/http.dart' as http;
 import 'package:package_info/package_info.dart';
-import 'package:html/parser.dart' show parse;
-import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/cupertino.dart';
-import 'dart:convert';
-import 'dart:async';
 
 /// Information about the app's current version, and the most recent version
 /// available in the Apple App Store or Google Play Store.
@@ -24,7 +26,10 @@ class VersionStatus {
   /// A link to the app store page where the app can be updated.
   String appStoreLink;
 
-  VersionStatus({this.canUpdate, this.localVersion, this.storeVersion});
+  /// Package name.
+  String packageName;
+
+  VersionStatus({this.canUpdate, this.localVersion, this.storeVersion, this.packageName});
 }
 
 class NewVersion {
@@ -86,22 +91,20 @@ class NewVersion {
     VersionStatus versionStatus = VersionStatus(
       localVersion: packageInfo.version,
     );
-    switch (Theme.of(context).platform) {
-      case TargetPlatform.android:
-        final id = androidId ?? packageInfo.packageName;
-        versionStatus = await _getAndroidStoreVersion(id, versionStatus);
-        break;
-      case TargetPlatform.iOS:
-        final id = iOSId ?? packageInfo.packageName;
-        versionStatus = await _getiOSStoreVersion(id, versionStatus);
-        break;
-      default:
-        print('This target platform is not yet supported by this package.');
+
+    if (Platform.isAndroid) {
+      final id = androidId ?? packageInfo.packageName;
+      versionStatus = await _getAndroidStoreVersion(id, versionStatus);
+    } else if (Platform.isIOS) {
+      final id = iOSId ?? packageInfo.packageName;
+      versionStatus = await _getiOSStoreVersion(id, versionStatus);
+    } else {
+      print('This target platform is not yet supported by this package.');
+      throw UnsupportedError('This target platform is not yet supported by this package.');
     }
-    if (versionStatus == null) {
-      return null;
-    }
+
     versionStatus.canUpdate = versionStatus.storeVersion != versionStatus.localVersion;
+    versionStatus.packageName = androidId ?? packageInfo.packageName;
     return versionStatus;
   }
 
@@ -147,10 +150,11 @@ class NewVersion {
           'You can now update this app from ${versionStatus.localVersion} to ${versionStatus.storeVersion}',
     );
     final dismissText = Text(this.dismissText);
-    final dismissAction = this.dismissAction ?? () => Navigator.of(context, rootNavigator: true).pop();
+    final dismissAction =
+        this.dismissAction ?? () => Navigator.of(context, rootNavigator: true).pop();
     final updateText = Text(this.updateText);
     final updateAction = () {
-      _launchAppStore(versionStatus.appStoreLink);
+      _launchAppStore(versionStatus.appStoreLink, versionStatus.packageName);
       Navigator.of(context, rootNavigator: true).pop();
     };
     final platform = Theme.of(context).platform;
@@ -191,9 +195,13 @@ class NewVersion {
   }
 
   /// Launches the Apple App Store or Google Play Store page for the app.
-  void _launchAppStore(String appStoreLink) async {
+  void _launchAppStore(String appStoreLink, String packageName) async {
     if (await canLaunch(appStoreLink)) {
-      await launch(appStoreLink);
+      try {
+        await launch("market://details?id=" + packageName);
+      } finally {
+        await launch(appStoreLink);
+      }
     } else {
       throw 'Could not launch appStoreLink';
     }
