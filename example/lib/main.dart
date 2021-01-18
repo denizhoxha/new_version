@@ -58,6 +58,10 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     NewVersion(
       context: context,
+      dialogText: 'There is a new version of the app in the store',
+      dialogTitle: 'Update Available',
+      dismissText: 'Maybe Later',
+      updateText: 'Update',
       iOSId: 'com.google.Vespa',
       androidId: 'com.google.android.apps.cloudconsole',
     ).showAlertIfNecessary();
