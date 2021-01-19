@@ -102,6 +102,10 @@ class NewVersion {
       print('This target platform is not yet supported by this package.');
       throw UnsupportedError('This target platform is not yet supported by this package.');
     }
+    
+    if (versionStatus == null) {
+      return null;
+    }
 
     versionStatus.canUpdate = versionStatus.storeVersion != versionStatus.localVersion;
     versionStatus.packageName = androidId ?? packageInfo.packageName;
