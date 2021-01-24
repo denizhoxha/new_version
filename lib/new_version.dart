@@ -203,7 +203,7 @@ class NewVersion {
     if (await canLaunch(appStoreLink)) {
       try {
         await launch("market://details?id=" + packageName);
-      } finally {
+      } catch (e) {
         await launch(appStoreLink);
       }
     } else {
